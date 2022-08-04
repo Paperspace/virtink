@@ -37,6 +37,11 @@ func TestValidateVM(t *testing.T) {
 					},
 					MAC: "c6:1c:ba:0a:45:88",
 				}},
+				GPUs: []virtv1alpha1.GPU{{
+					Name:                         "gpu-1",
+					ResourceName:                 "nvidia.com/Tesla_01",
+					ResourcePCIAddressEnvVarName: "PCI_RESOURCE_NVIDIA_COM_Tesla_01",
+				}},
 			},
 			Volumes: []virtv1alpha1.Volume{{
 				Name: "vol-1",
@@ -472,6 +477,27 @@ func TestValidateVM(t *testing.T) {
 			return vm
 		}(),
 		invalidFields: []string{"spec.networks[0].multus"},
+	}, {
+		vm: func() *virtv1alpha1.VirtualMachine {
+			vm := validVM.DeepCopy()
+			vm.Spec.Instance.GPUs[0].Name = ""
+			return vm
+		}(),
+		invalidFields: []string{"spec.instance.gpus[0].name"},
+	}, {
+		vm: func() *virtv1alpha1.VirtualMachine {
+			vm := validVM.DeepCopy()
+			vm.Spec.Instance.GPUs[0].ResourceName = ""
+			return vm
+		}(),
+		invalidFields: []string{"spec.instance.gpus[0].resourceName"},
+	}, {
+		vm: func() *virtv1alpha1.VirtualMachine {
+			vm := validVM.DeepCopy()
+			vm.Spec.Instance.GPUs[0].ResourcePCIAddressEnvVarName = ""
+			return vm
+		}(),
+		invalidFields: []string{"spec.instance.gpus[0].resourcePCIAddressEnvVarName"},
 	}}
 
 	for _, tc := range tests {
@@ -493,6 +519,13 @@ func TestMutateVM(t *testing.T) {
 			Instance: virtv1alpha1.Instance{
 				Interfaces: []virtv1alpha1.Interface{{
 					Name: "pod",
+				}},
+				GPUs: []virtv1alpha1.GPU{{
+					Name:         "gpu-1",
+					ResourceName: "nvidia.com/Tesla_01",
+				}, {
+					Name:         "gpu-2",
+					ResourceName: "amd.com/S7100",
 				}},
 			},
 		},
@@ -597,7 +630,29 @@ func TestMutateVM(t *testing.T) {
 		assert: func(vm *virtv1alpha1.VirtualMachine) {
 			assert.Equal(t, vm.Spec.Instance.Interfaces[0].Masquerade.CIDR, "10.0.2.0/30")
 		},
+	}, {
+		vm: func() *virtv1alpha1.VirtualMachine {
+			return oldVM.DeepCopy()
+		}(),
+		assert: func(vm *virtv1alpha1.VirtualMachine) {
+			assert.NotNil(t, vm.Spec.Instance.Interfaces[0].InterfaceBindingMethod.Bridge)
+		},
+	}, {
+		vm: func() *virtv1alpha1.VirtualMachine {
+			return oldVM.DeepCopy()
+		}(),
+		assert: func(vm *virtv1alpha1.VirtualMachine) {
+			assert.Equal(t, vm.Spec.Instance.GPUs[0].ResourcePCIAddressEnvVarName, "PCI_RESOURCE_NVIDIA_COM_Tesla_01")
+		},
+	}, {
+		vm: func() *virtv1alpha1.VirtualMachine {
+			return oldVM.DeepCopy()
+		}(),
+		assert: func(vm *virtv1alpha1.VirtualMachine) {
+			assert.Equal(t, vm.Spec.Instance.GPUs[1].ResourcePCIAddressEnvVarName, "")
+		},
 	}}
+
 	for _, tc := range tests {
 		err := MutateVM(context.Background(), tc.vm, tc.oldVM)
 		assert.Nil(t, err)

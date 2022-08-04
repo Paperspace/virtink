@@ -58,6 +58,7 @@ type Instance struct {
 	Disks       []Disk       `json:"disks,omitempty"`
 	FileSystems []FileSystem `json:"fileSystems,omitempty"`
 	Interfaces  []Interface  `json:"interfaces,omitempty"`
+	GPUs       []GPU       `json:"gpus,omitempty"`
 }
 
 type CPU struct {
@@ -116,6 +117,11 @@ type InterfaceSRIOV struct {
 }
 
 type InterfaceVhostUser struct {
+}
+type GPU struct {
+	Name                         string `json:"name"`
+	ResourceName                 string `json:"resourceName"`
+	ResourcePCIAddressEnvVarName string `json:"resourcePCIAddressEnvVarName,omitempty"`
 }
 
 type Volume struct {
